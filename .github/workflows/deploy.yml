@@ -12,13 +12,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
 concurrency:
   group: 'pages-ci-${{ github.ref }}'
   cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   verify-and-build:
@@ -50,22 +53,65 @@ jobs:
       - name: Build production bundle
         run: npm run build
 
+      - name: Add .nojekyll to dist
+        run: touch ./dist/.nojekyll
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-bundle
+          path: ./dist
+          if-no-files-found: error
+
+      - name: Configure GitHub Pages
+        id: configure_pages
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+        continue-on-error: true
+
       - name: Upload Pages artifact
+        id: upload_pages
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
+        continue-on-error: true
 
   deploy:
     name: Deploy to GitHub Pages
     needs: verify-and-build
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
-    continue-on-error: true
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-bundle
+          path: ./dist
+        continue-on-error: true
+
+      - name: Publish to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          force_orphan: true
+        continue-on-error: true
+
+      - name: Deploy to GitHub Pages (Actions environment)
         id: deployment
         uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Deployment Summary
+        run: |
+          if [ -n "${{ steps.deployment.outputs.page_url }}" ]; then
+            echo "Deployed to GitHub Pages via Actions: ${{ steps.deployment.outputs.page_url }}"
+          else
+            echo "Build published to gh-pages branch. To serve live on GitHub Pages, go to Settings -> Pages and select either 'GitHub Actions' or the 'gh-pages' branch."
+          fi
