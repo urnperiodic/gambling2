@@ -1,0 +1,222 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-display: 'Cinzel', Georgia, serif;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #070d0a;
+    color: #f3f5f4;
+  }
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono-tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================================
+   CASINO FLOOR & TABLE ANIMATIONS
+============================================================================ */
+@keyframes velvetFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes velvetFloatDelayed {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(5px);
+  }
+}
+
+@keyframes velvetDiceLeft {
+  0%, 100% {
+    transform: rotate(-12deg) translateY(0px);
+  }
+  50% {
+    transform: rotate(-6deg) translateY(-5px);
+  }
+}
+
+@keyframes velvetDiceRight {
+  0%, 100% {
+    transform: rotate(10deg) translateY(0px);
+  }
+  50% {
+    transform: rotate(16deg) translateY(-4px);
+  }
+}
+
+@keyframes velvetCardLeft {
+  0%, 100% {
+    transform: rotate(-8deg) translateY(0px);
+  }
+  50% {
+    transform: rotate(-12deg) translateY(-4px);
+  }
+}
+
+@keyframes velvetCardRight {
+  0%, 100% {
+    transform: rotate(10deg) translateY(0px);
+  }
+  50% {
+    transform: rotate(15deg) translateY(-5px);
+  }
+}
+
+@keyframes velvetPlinkoBall {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    box-shadow: 0 0 14px rgba(251, 191, 36, 0.85);
+  }
+  50% {
+    transform: translateY(6px) scale(1.08);
+    box-shadow: 0 0 24px rgba(251, 191, 36, 1);
+  }
+}
+
+@keyframes velvetPegTwinkle {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.22);
+    box-shadow: 0 0 8px rgba(253, 230, 138, 0.9);
+  }
+}
+
+@keyframes velvetSpinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes velvetSlotReelBounce {
+  0% {
+    transform: translateY(-16px) scale(0.92);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translateY(16px) scale(0.95);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-16px) scale(0.92);
+    opacity: 0.65;
+  }
+}
+
+@keyframes velvetCardDeal {
+  0% {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.88) rotate(-4deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes velvetDiceTumble {
+  0% {
+    transform: rotate(0deg) scale(0.92);
+  }
+  25% {
+    transform: rotate(-18deg) scale(1.06) translateY(-6px);
+  }
+  50% {
+    transform: rotate(18deg) scale(0.96) translateY(4px);
+  }
+  75% {
+    transform: rotate(-12deg) scale(1.04) translateY(-4px);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+.animate-velvet-float {
+  animation: velvetFloat 3.2s ease-in-out infinite;
+}
+
+.animate-velvet-float-delayed {
+  animation: velvetFloatDelayed 3.2s ease-in-out infinite;
+}
+
+.animate-velvet-dice-left {
+  animation: velvetDiceLeft 3s ease-in-out infinite;
+}
+
+.animate-velvet-dice-right {
+  animation: velvetDiceRight 3.4s ease-in-out infinite;
+}
+
+.animate-velvet-card-left {
+  animation: velvetCardLeft 3.5s ease-in-out infinite;
+}
+
+.animate-velvet-card-right {
+  animation: velvetCardRight 3.5s ease-in-out infinite;
+}
+
+.animate-velvet-plinko-ball {
+  animation: velvetPlinkoBall 2s ease-in-out infinite;
+}
+
+.animate-velvet-peg {
+  animation: velvetPegTwinkle 2.4s ease-in-out infinite;
+}
+
+.animate-velvet-spin-slow {
+  animation: velvetSpinSlow 12s linear infinite;
+}
+
+.animate-velvet-slot-spin {
+  animation: velvetSlotReelBounce 0.16s linear infinite;
+}
+
+.animate-velvet-card-deal {
+  animation: velvetCardDeal 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-velvet-dice-tumble {
+  animation: velvetDiceTumble 0.32s ease-in-out infinite;
+}
+
+/* Custom subtle scrollbars for tables and logs */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(10, 20, 15, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.25);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.45);
+}
