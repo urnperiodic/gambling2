@@ -14,11 +14,11 @@ interface RoyalWheelGameProps {
 }
 
 const WHEEL_BET_OPTIONS: { mult: RoyalWheelMult; label: string; color: string; count: number }[] = [
-  { mult: 1, label: '1x Gold', color: '#eab308', count: 4 },
-  { mult: 2, label: '2x Emerald', color: '#10b981', count: 8 },
-  { mult: 5, label: '5x Sapphire', color: '#3b82f6', count: 6 },
+  { mult: 1, label: '1x Gold', color: '#eab308', count: 25 },
+  { mult: 2, label: '2x Emerald', color: '#10b981', count: 16 },
+  { mult: 5, label: '5x Sapphire', color: '#3b82f6', count: 8 },
   { mult: 10, label: '10x Amethyst', color: '#a855f7', count: 4 },
-  { mult: 50, label: '50x Jackpot Crown', color: '#e11d48', count: 2 },
+  { mult: 50, label: '50x Jackpot Crown', color: '#e11d48', count: 1 },
 ];
 
 export const RoyalWheelGame: React.FC<RoyalWheelGameProps> = ({
@@ -204,7 +204,7 @@ export const RoyalWheelGame: React.FC<RoyalWheelGameProps> = ({
                         <div className="text-left">
                           <div className="text-xs font-bold text-white">{opt.label}</div>
                           <div className="text-[10px] text-slate-400">
-                            {opt.count}/24 Pockets · Pays {opt.mult}:1
+                            {opt.count}/{ROYAL_WHEEL_SEGMENTS.length} Pockets · Pays {opt.mult}:1
                           </div>
                         </div>
                       </div>
@@ -315,7 +315,7 @@ export const RoyalWheelGame: React.FC<RoyalWheelGameProps> = ({
                         x={tx}
                         y={ty}
                         fill="#ffffff"
-                        fontSize="7.5"
+                        fontSize="4.6"
                         fontWeight="800"
                         fontFamily="JetBrains Mono, monospace"
                         textAnchor="middle"

@@ -378,7 +378,7 @@ export default function App() {
 
   const handleTakeUndergroundLoan = (loanAmount: number) => {
     setAccount((prev) => {
-      const debtAdded = Math.round(loanAmount * 1.1);
+      const debtAdded = Math.round(loanAmount * 1.25);
       const nextChips = prev.chips - debtAdded;
       if (shouldArrestPlayer(nextChips)) {
         setTimeout(() => triggerArrest(nextChips, prev.ownedItems), 60);
@@ -683,7 +683,7 @@ export default function App() {
       {/* Debt Danger Warning Bar when Negative */}
       {account.chips < 0 && (
         <div className="w-full bg-rose-950/90 border-b border-rose-500/40 px-4 py-1.5 text-center text-xs text-rose-200 font-medium">
-          SYNDICATE DEBT ACTIVE ({account.chips.toLocaleString()} Chips) — 3.5% Vig Applied on Losses · Federal Arrest at{' '}
+          SYNDICATE DEBT ACTIVE ({account.chips.toLocaleString()} Chips) — 6.0% Vig Applied on Losses · Federal Arrest at{' '}
           <strong className="font-mono-tabular text-rose-300">{ARREST_DEBT_THRESHOLD.toLocaleString()} (-10M)</strong> Chips!
         </div>
       )}

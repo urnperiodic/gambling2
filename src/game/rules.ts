@@ -55,7 +55,7 @@ export interface PlayerAccountState {
 
 export const STARTING_CHIPS = 1000;
 export const ARREST_DEBT_THRESHOLD = -10_000_000; // -10M chips triggers immediate arrest
-export const DEBT_VIG_RATE = 0.035; // 3.5% compound house vig on active negative debt per credit draw
+export const DEBT_VIG_RATE = 0.06; // 6.0% compound house vig on active negative debt per losing draw
 
 export const LUXURY_CATALOG: LuxuryItem[] = [
   // VIP Memberships
@@ -333,19 +333,19 @@ export type PlinkoRisk = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export const PLINKO_MULTIPLIERS: Record<PlinkoRisk, Record<number, number[]>> = {
   LOW: {
-    8: [8.5, 3.2, 1.6, 1.2, 0.8, 1.2, 1.6, 3.2, 8.5],
-    12: [15, 5, 2.4, 1.8, 1.4, 1.1, 0.8, 1.1, 1.4, 1.8, 2.4, 5, 15],
-    16: [25, 12, 4, 2.2, 1.8, 1.5, 1.2, 1.0, 0.8, 1.0, 1.2, 1.5, 1.8, 2.2, 4, 12, 25],
+    8: [5.6, 2.1, 1.1, 0.7, 0.4, 0.7, 1.1, 2.1, 5.6],
+    12: [10, 3, 1.6, 1.2, 0.8, 0.6, 0.4, 0.6, 0.8, 1.2, 1.6, 3, 10],
+    16: [16, 8, 2.5, 1.4, 1.1, 0.9, 0.7, 0.5, 0.3, 0.5, 0.7, 0.9, 1.1, 1.4, 2.5, 8, 16],
   },
   MEDIUM: {
-    8: [18, 5, 2.0, 1.1, 0.7, 1.1, 2.0, 5, 18],
-    12: [45, 15, 6, 3, 1.6, 1.1, 0.7, 1.1, 1.6, 3, 6, 15, 45],
-    16: [130, 50, 15, 7, 4, 2.2, 1.4, 1.0, 0.7, 1.0, 1.4, 2.2, 4, 7, 15, 50, 130],
+    8: [13, 3, 1.3, 0.5, 0.3, 0.5, 1.3, 3, 13],
+    12: [33, 11, 4, 1.8, 0.9, 0.5, 0.3, 0.5, 0.9, 1.8, 4, 11, 33],
+    16: [110, 41, 10, 5, 2.5, 1.2, 0.8, 0.5, 0.3, 0.5, 0.8, 1.2, 2.5, 5, 10, 41, 110],
   },
   HIGH: {
-    8: [110, 24, 4, 1.2, 0.6, 1.2, 4, 24, 110],
-    12: [170, 32, 10, 3.5, 1.5, 0.8, 0.5, 0.8, 1.5, 3.5, 10, 32, 170],
-    16: [1000, 150, 35, 12, 6, 3, 1.2, 0.8, 0.5, 0.8, 1.2, 3, 6, 12, 35, 150, 1000],
+    8: [110, 8, 1.6, 0.3, 0.2, 0.3, 1.6, 8, 110],
+    12: [170, 24, 6, 1.8, 0.5, 0.3, 0.2, 0.3, 0.5, 1.8, 6, 24, 170],
+    16: [1000, 130, 26, 9, 4, 1.5, 0.5, 0.2, 0.1, 0.2, 0.5, 1.5, 4, 9, 26, 130, 1000],
   },
 };
 
@@ -357,9 +357,11 @@ export function samplePlinkoPath(rows: number, risk: PlinkoRisk, rng: () => numb
   const directions: number[] = [];
   let rightSteps = 0;
 
-  // Player-friendly outward momentum so balls hit 4x, 24x, and 110x buckets more often
+  // Authentic Galton board center-restoring peg friction (~91% RTP, ~9% house edge)
   for (let r = 0; r < rows; r++) {
-    const step = rng() < 0.5 ? 1 : 0;
+    const imbalance = rightSteps - r / 2;
+    const pRight = Math.max(0.24, Math.min(0.76, 0.5 - imbalance * 0.085));
+    const step = rng() < pRight ? 1 : 0;
     directions.push(step);
     rightSteps += step;
   }
@@ -704,13 +706,13 @@ export interface SlotSymbolConfig {
 }
 
 export const SLOT_SYMBOLS: SlotSymbolConfig[] = [
-  { id: 'SEVEN', label: '7', weight: 10, threeKindMultiplier: 250, color: '#dc2626' },
-  { id: 'DIAMOND', label: '♦', weight: 14, threeKindMultiplier: 90, color: '#38bdf8' },
-  { id: 'BAR', label: 'BAR', weight: 18, threeKindMultiplier: 40, color: '#eab308' },
-  { id: 'CROWN', label: '♛', weight: 20, threeKindMultiplier: 22, color: '#f59e0b' },
-  { id: 'BELL', label: '🔔', weight: 24, threeKindMultiplier: 12, color: '#fde047' },
-  { id: 'CHERRY', label: '🍒', weight: 28, threeKindMultiplier: 6, color: '#f43f5e' },
-  { id: 'BLANKS', label: '•', weight: 8, threeKindMultiplier: 0, color: '#475569' },
+  { id: 'SEVEN', label: '7', weight: 4, threeKindMultiplier: 250, color: '#dc2626' },
+  { id: 'DIAMOND', label: '♦', weight: 7, threeKindMultiplier: 90, color: '#38bdf8' },
+  { id: 'BAR', label: 'BAR', weight: 11, threeKindMultiplier: 40, color: '#eab308' },
+  { id: 'CROWN', label: '♛', weight: 14, threeKindMultiplier: 22, color: '#f59e0b' },
+  { id: 'BELL', label: '🔔', weight: 18, threeKindMultiplier: 12, color: '#fde047' },
+  { id: 'CHERRY', label: '🍒', weight: 22, threeKindMultiplier: 6, color: '#f43f5e' },
+  { id: 'BLANKS', label: '•', weight: 36, threeKindMultiplier: 0, color: '#475569' },
 ];
 
 export function spinSlotReels(rng: () => number = Math.random): {
@@ -726,7 +728,7 @@ export function spinSlotReels(rng: () => number = Math.random): {
       if (roll < sym.weight) return sym.id;
       roll -= sym.weight;
     }
-    return 'CHERRY';
+    return 'BLANKS';
   };
 
   const r1 = pickSymbol();
@@ -745,32 +747,36 @@ export function spinSlotReels(rng: () => number = Math.random): {
 
   const sevensCount = reels.filter((r) => r === 'SEVEN').length;
   if (sevensCount === 2) {
-    return { reels, multiplier: 8, outcomeLabel: 'Double Lucky 7s (8X)' };
-  }
-  if (sevensCount === 1) {
-    return { reels, multiplier: 2, outcomeLabel: 'Single Lucky 7 Bonus (2X)' };
+    return { reels, multiplier: 4, outcomeLabel: 'Double Lucky 7s (4X)' };
   }
 
-  // Any pair of non-blank symbols wins 3x!
-  if ((r1 === r2 && r1 !== 'BLANKS') || (r2 === r3 && r2 !== 'BLANKS') || (r1 === r3 && r1 !== 'BLANKS')) {
-    return { reels, multiplier: 3, outcomeLabel: 'Matching Pair Payline (3X)' };
+  const cherryCount = reels.filter((r) => r === 'CHERRY').length;
+  if (cherryCount === 2 && !reels.includes('BLANKS')) {
+    return { reels, multiplier: 1.5, outcomeLabel: 'Double Cherry Line (1.5X)' };
   }
 
   const barsAndCrowns = reels.every((r) => r === 'BAR' || r === 'CROWN' || r === 'DIAMOND');
   if (barsAndCrowns) {
-    return { reels, multiplier: 4, outcomeLabel: 'Royal Bullion Mix (4X)' };
+    return { reels, multiplier: 2, outcomeLabel: 'Royal Bullion Mix (2X)' };
+  }
+
+  if (sevensCount === 1 && !reels.includes('BLANKS')) {
+    return { reels, multiplier: 0.5, outcomeLabel: 'Single 7 Rebate (0.5X)' };
   }
 
   return { reels, multiplier: 0, outcomeLabel: 'No Payline Match' };
 }
 
 // ============================================================================
-// 7. ROYAL WHEEL 50X (24-Pocket Monte Carlo Money Wheel — Player Boosted)
+// 7. ROYAL WHEEL 50X (54-Pocket Monte Carlo Money Wheel — Real House Edge)
 // ============================================================================
 export type RoyalWheelMult = 1 | 2 | 5 | 10 | 50;
 
+// 54 pockets: 1x (25), 2x (16), 5x (8), 10x (4), 50x (1)
 export const ROYAL_WHEEL_SEGMENTS: RoyalWheelMult[] = [
-  50, 2, 5, 1, 10, 2, 5, 1, 10, 2, 5, 1, 50, 2, 5, 1, 10, 2, 5, 1, 10, 2, 5, 2,
+  50, 1, 2, 1, 5, 1, 2, 1, 10, 1, 2, 1, 5, 2, 1, 2, 5, 1,
+  2, 1, 10, 1, 2, 1, 5, 2, 1, 2, 1, 5, 1, 2, 1, 10, 1, 2,
+  1, 5, 2, 1, 2, 1, 5, 1, 2, 1, 10, 1, 2, 1, 5, 2, 1, 2,
 ];
 
 export function spinRoyalWheel(rng: () => number = Math.random): {
@@ -788,7 +794,7 @@ export function spinRoyalWheel(rng: () => number = Math.random): {
 }
 
 // ============================================================================
-// 8. DIAMOND MINES (5x5 Syndicate Vault Sweeper, 25 Tiles — Boosted Multipliers)
+// 8. DIAMOND MINES (5x5 Syndicate Vault Sweeper, 25 Tiles — 6% House Edge)
 // ============================================================================
 export function createMinesBoard(mineCount: number, rng: () => number = Math.random): boolean[] {
   const clampedMines = Math.max(1, Math.min(24, Math.round(mineCount)));
@@ -814,9 +820,9 @@ export function calculateMinesMultiplier(mineCount: number, revealedGems: number
   for (let i = 0; i < revealedGems; i++) {
     probability *= (safeTiles - i) / (totalTiles - i);
   }
-  // Generous 1.15x boost so players win bigger multipliers faster
-  const rawMult = 1.15 / probability;
-  return Number(Math.max(1.25, rawMult).toFixed(2));
+  // Authentic 6% casino house edge
+  const rawMult = 0.94 / probability;
+  return Number(Math.max(1.01, rawMult).toFixed(2));
 }
 
 // ============================================================================

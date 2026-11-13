@@ -252,7 +252,7 @@ export const CashierLuxuryModal: React.FC<CashierLuxuryModalProps> = ({
 
                 <p className="text-xs text-rose-200/80 leading-relaxed">
                   When broke, you can keep gambling into negative chip debt or draw emergency credit.{' '}
-                  <strong>WARNING:</strong> Negative balances accrue 3.5% syndicate vig per loss. If your balance reaches{' '}
+                  <strong>WARNING:</strong> Negative balances accrue 6.0% syndicate vig per loss. If your balance reaches{' '}
                   <strong className="font-mono-tabular text-rose-400">-10,000,000 (-10M)</strong> chips, you will be{' '}
                   <strong>ARRESTED</strong>, your cars &amp; real estate will be seized, and you will restart at 1,000 chips!
                 </p>
@@ -294,13 +294,13 @@ export const CashierLuxuryModal: React.FC<CashierLuxuryModalProps> = ({
                       onTakeUndergroundLoan(loanInput);
                       setStatusBanner(
                         `Signed Syndicate Marker for $${loanInput.toLocaleString()} Cash (-${Math.round(
-                          loanInput * 1.1
-                        ).toLocaleString()} chip debt including 10% origination fee).`
+                          loanInput * 1.25
+                        ).toLocaleString()} chip debt including 25% origination fee).`
                       );
                     }}
                     className="w-full py-3 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs cursor-pointer"
                   >
-                    Sign Marker for ${loanInput.toLocaleString()} Cash (-{Math.round(loanInput * 1.1).toLocaleString()} Chips)
+                    Sign Marker for ${loanInput.toLocaleString()} Cash (-{Math.round(loanInput * 1.25).toLocaleString()} Chips)
                   </button>
                 </div>
               </div>

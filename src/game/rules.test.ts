@@ -182,3 +182,36 @@ test('Royal Wheel, Diamond Mines, and Baccarat rules compute valid multipliers a
   assert.equal(baccaratRes.winner, 'PLAYER');
 });
 
+test('Casino games enforce real house edge (< 100% expected return) over large samples', () => {
+  // Deterministic PRNG (LCG)
+  let seed = 42;
+  const rng = () => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    return seed / 4294967296;
+  };
+
+  let plinkoReturn = 0;
+  const N = 2000;
+  for (let i = 0; i < N; i++) {
+    plinkoReturn += samplePlinkoPath(8, 'HIGH', rng).multiplier;
+  }
+  assert.ok(plinkoReturn / N < 0.98, `Expected Plinko RTP < 0.98, got ${plinkoReturn / N}`);
+
+  let slotsReturn = 0;
+  for (let i = 0; i < N; i++) {
+    slotsReturn += spinSlotReels(rng).multiplier;
+  }
+  assert.ok(slotsReturn / N < 0.98, `Expected Slots RTP < 0.98, got ${slotsReturn / N}`);
+
+  // Royal Wheel 1x bet RTP on 54 pockets (25/54 * 2 = 0.926)
+  let wheelHits = 0;
+  for (let i = 0; i < N; i++) {
+    if (spinRoyalWheel(rng).multiplier === 1) wheelHits++;
+  }
+  assert.ok((wheelHits * 2) / N < 0.98, `Expected Wheel 1x RTP < 0.98, got ${(wheelHits * 2) / N}`);
+
+  // Diamond Mines 5 bombs, 1 pick: 20/25 * mult < 1.0
+  const oneGemMult = calculateMinesMultiplier(5, 1);
+  assert.ok((20 / 25) * oneGemMult < 0.97, `Expected Mines EV < 0.97, got ${(20 / 25) * oneGemMult}`);
+});
+

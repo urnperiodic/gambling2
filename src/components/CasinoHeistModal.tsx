@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { PlayerAccountState } from '../game/rules';
 import { soundEngine } from '../game/sound';
 
@@ -16,11 +16,26 @@ interface TumblerZone {
   speed: number;
 }
 
-const TUMBLERS: TumblerZone[] = [
-  { label: 'Tumbler 1 · Outer Vault Laser Grid', min: 26, max: 74, speed: 1.05 },
-  { label: 'Tumbler 2 · Biometric Retina Lock', min: 30, max: 70, speed: 1.35 },
-  { label: 'Tumbler 3 · Master Bullion Bolt', min: 32, max: 68, speed: 1.65 },
-];
+const HEIST_TIME_LIMIT_SEC = 15.0;
+
+function generateHardTumblers(): TumblerZone[] {
+  const specs = [
+    { label: 'Lock 1 · Thermal Laser Matrix', width: 15, speed: 1.95 },
+    { label: 'Lock 2 · Biometric Iris Scanner', width: 11, speed: 2.4 },
+    { label: 'Lock 3 · Dual Seismic Tumblers', width: 8, speed: 2.95 },
+    { label: 'Lock 4 · Sovereign Bullion Core', width: 5.5, speed: 3.45 },
+  ];
+
+  return specs.map((spec) => {
+    const min = Math.round(12 + Math.random() * (88 - spec.width - 12));
+    return {
+      label: spec.label,
+      min,
+      max: Number((min + spec.width).toFixed(1)),
+      speed: spec.speed,
+    };
+  });
+}
 
 export const CasinoHeistModal: React.FC<CasinoHeistModalProps> = ({
   account,
@@ -29,15 +44,21 @@ export const CasinoHeistModal: React.FC<CasinoHeistModalProps> = ({
   onHeistCaughtInstantArrest,
 }) => {
   const alreadyUsed = Boolean(account.heistAttempted);
+  const tumblers = useMemo(() => generateHardTumblers(), []);
   const [stageIndex, setStageIndex] = useState<number>(0);
   const [status, setStatus] = useState<'ACTIVE' | 'WON' | 'CAUGHT'>(
     alreadyUsed ? 'WON' : 'ACTIVE'
   );
+  const [timeLeft, setTimeLeft] = useState<number>(HEIST_TIME_LIMIT_SEC);
+  const [missReason, setMissReason] = useState<string>(
+    'LASER ALARM TRIPPED! Casino SWAT Team deployed — Instant Arrest!'
+  );
 
-  const posRef = useRef<number>(48);
-  const dirRef = useRef<number>(1);
+  const posRef = useRef<number>(Math.random() < 0.5 ? 12 : 88);
+  const dirRef = useRef<number>(posRef.current < 50 ? 1 : -1);
   const stageRef = useRef<number>(0);
   const pinElRef = useRef<HTMLDivElement | null>(null);
+  const caughtTriggeredRef = useRef<boolean>(false);
   stageRef.current = stageIndex;
 
   useEffect(() => {
@@ -50,8 +71,11 @@ export const CasinoHeistModal: React.FC<CasinoHeistModalProps> = ({
       const dt = Math.min(40, now - lastTime);
       lastTime = now;
 
-      const currentTumbler = TUMBLERS[stageRef.current] || TUMBLERS[0];
-      posRef.current += dirRef.current * currentTumbler.speed * (dt * 0.085);
+      const currentTumbler = tumblers[stageRef.current] || tumblers[0];
+      // Dynamic speed surge near the middle makes timing genuinely demanding
+      const centerDist = Math.abs(posRef.current - 50) / 50;
+      const surge = 1 + (1 - centerDist) * 0.25;
+      posRef.current += dirRef.current * currentTumbler.speed * surge * (dt * 0.088);
 
       if (posRef.current >= 98) {
         posRef.current = 98;
@@ -69,26 +93,56 @@ export const CasinoHeistModal: React.FC<CasinoHeistModalProps> = ({
 
     rafId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafId);
-  }, [alreadyUsed, status]);
+  }, [alreadyUsed, status, tumblers]);
+
+  // Strict SWAT breach countdown timer
+  useEffect(() => {
+    if (alreadyUsed || status !== 'ACTIVE') return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        const next = Math.max(0, Number((prev - 0.1).toFixed(1)));
+        if (next <= 0 && !caughtTriggeredRef.current) {
+          caughtTriggeredRef.current = true;
+          soundEngine.playArrestSiren();
+          setMissReason('SECURITY TIMER EXPIRED! Vault sealed & Casino SWAT breached — Instant Arrest!');
+          setStatus('CAUGHT');
+          setTimeout(() => {
+            onHeistCaughtInstantArrest();
+          }, 650);
+        }
+        return next;
+      });
+    }, 100);
+
+    return () => clearInterval(timer);
+  }, [alreadyUsed, status, onHeistCaughtInstantArrest]);
 
   const handleLockTumbler = () => {
-    if (alreadyUsed || status !== 'ACTIVE') return;
-    const currentTumbler = TUMBLERS[stageIndex];
+    if (alreadyUsed || status !== 'ACTIVE' || caughtTriggeredRef.current) return;
+    const currentTumbler = tumblers[stageIndex];
     const hit = posRef.current >= currentTumbler.min && posRef.current <= currentTumbler.max;
 
     if (hit) {
-      soundEngine.playWinChime(stageIndex === TUMBLERS.length - 1);
-      if (stageIndex + 1 >= TUMBLERS.length) {
+      soundEngine.playWinChime(stageIndex === tumblers.length - 1);
+      if (stageIndex + 1 >= tumblers.length) {
         setStatus('WON');
         setTimeout(() => {
-          onHeistSuccess(500_000, 250_000);
+          onHeistSuccess(350_000, 150_000);
         }, 700);
       } else {
+        // Randomize next starting side so you cannot predict rhythm effortlessly
+        posRef.current = Math.random() < 0.5 ? 5 : 95;
+        dirRef.current = posRef.current < 50 ? 1 : -1;
         setStageIndex((prev) => prev + 1);
       }
     } else {
-      // Caught at the casino -> Instant Arrest!
+      // Unforgiving: 1 miss = Instant Arrest!
+      caughtTriggeredRef.current = true;
       soundEngine.playArrestSiren();
+      setMissReason(
+        `TRIPPED ${currentTumbler.label.toUpperCase()} (${posRef.current.toFixed(1)}% missed ${currentTumbler.min}%–${currentTumbler.max}%) — Instant Arrest!`
+      );
       setStatus('CAUGHT');
       setTimeout(() => {
         onHeistCaughtInstantArrest();
@@ -96,7 +150,7 @@ export const CasinoHeistModal: React.FC<CasinoHeistModalProps> = ({
     }
   };
 
-  const currentTumbler = TUMBLERS[stageIndex] || TUMBLERS[0];
+  const currentTumbler = tumblers[stageIndex] || tumblers[0];
 
   return (
     <div
@@ -105,25 +159,30 @@ export const CasinoHeistModal: React.FC<CasinoHeistModalProps> = ({
       aria-label="Rob the Casino Vault Minigame"
       className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
     >
-      <div className="w-full max-w-xl rounded-3xl bg-[#120b0e] border-2 border-rose-500/50 shadow-2xl overflow-hidden">
+      <div className="w-full max-w-xl rounded-3xl bg-[#120b0e] border-2 border-rose-500/60 shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 bg-[#1c0d13] border-b border-rose-500/30 flex items-center justify-between">
+        <div className="px-6 py-4 bg-[#1c0d13] border-b border-rose-500/30 flex items-center justify-between gap-2">
           <div>
             <span className="text-[10px] font-mono-tabular uppercase tracking-widest text-rose-400 block">
-              ONE TRY PER IDENTITY · HIGH-RISK COVERT OPERATION
+              ONE TRY PER IDENTITY · ZERO MARGIN FOR ERROR
             </span>
             <h2 className="font-display text-xl sm:text-2xl font-extrabold text-white">
               ROB THE VELVET CASINO VAULT
             </h2>
           </div>
-          {status === 'ACTIVE' && (
+          {status === 'ACTIVE' && stageIndex === 0 && (
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200 cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-200 cursor-pointer shrink-0"
             >
-              Abort ✕
+              Back Out ✕
             </button>
+          )}
+          {status === 'ACTIVE' && stageIndex > 0 && (
+            <span className="px-3 py-1.5 rounded-xl bg-rose-950 border border-rose-500/50 text-[11px] font-mono-tabular font-bold text-rose-300 shrink-0">
+              LOCKED IN — NO RETREAT
+            </span>
           )}
         </div>
 
@@ -147,35 +206,49 @@ export const CasinoHeistModal: React.FC<CasinoHeistModalProps> = ({
             </div>
           ) : (
             <>
-              {/* Stakes & Warning */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3.5 rounded-2xl bg-emerald-950/50 border border-emerald-500/30">
+              {/* Stakes & Countdown */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="p-3 rounded-2xl bg-emerald-950/50 border border-emerald-500/30">
                   <div className="text-[10px] uppercase font-bold text-emerald-300">
-                    Vault Heist Payout (If Successful)
+                    Vault Haul
                   </div>
-                  <div className="font-mono-tabular text-sm sm:text-base font-extrabold text-white mt-0.5">
-                    +500,000 Chips &amp; +$250,000 Cash
+                  <div className="font-mono-tabular text-xs sm:text-sm font-extrabold text-white mt-0.5">
+                    +350K Chips &amp; +$150K
                   </div>
                 </div>
-                <div className="p-3.5 rounded-2xl bg-rose-950/60 border border-rose-500/40">
+                <div className="p-3 rounded-2xl bg-rose-950/60 border border-rose-500/40">
                   <div className="text-[10px] uppercase font-bold text-rose-300">
-                    Penalty If Caught (1 Try Only)
+                    Single Miss
                   </div>
-                  <div className="font-mono-tabular text-sm sm:text-base font-extrabold text-rose-400 mt-0.5">
-                    INSTANT FEDERAL ARREST
+                  <div className="font-mono-tabular text-xs sm:text-sm font-extrabold text-rose-400 mt-0.5">
+                    INSTANT ARREST
+                  </div>
+                </div>
+                <div
+                  className={`p-3 rounded-2xl border ${
+                    timeLeft <= 5
+                      ? 'bg-rose-900/70 border-rose-400 animate-pulse'
+                      : 'bg-amber-950/50 border-amber-500/40'
+                  }`}
+                >
+                  <div className="text-[10px] uppercase font-bold text-amber-300">
+                    SWAT Breach Timer
+                  </div>
+                  <div className="font-mono-tabular text-sm sm:text-base font-extrabold text-white mt-0.5">
+                    {timeLeft.toFixed(1)}s
                   </div>
                 </div>
               </div>
 
-              {/* 3 Vault Tumbler Progress Pills */}
-              <div className="grid grid-cols-3 gap-2">
-                {TUMBLERS.map((t, idx) => {
+              {/* 4 Vault Lock Progress Pills */}
+              <div className="grid grid-cols-4 gap-2">
+                {tumblers.map((t, idx) => {
                   const done = idx < stageIndex || status === 'WON';
                   const active = idx === stageIndex && status === 'ACTIVE';
                   return (
                     <div
                       key={t.label}
-                      className={`p-2.5 rounded-xl border text-center transition-all ${
+                      className={`p-2 rounded-xl border text-center transition-all ${
                         done
                           ? 'bg-emerald-900/50 border-emerald-400 text-emerald-300'
                           : active
@@ -184,44 +257,44 @@ export const CasinoHeistModal: React.FC<CasinoHeistModalProps> = ({
                       }`}
                     >
                       <div className="font-mono-tabular text-[10px] font-extrabold uppercase">
-                        LOCK {idx + 1}/3
+                        LOCK {idx + 1}/4
                       </div>
-                      <div className="text-xs font-bold mt-0.5">
-                        {done ? 'CRACKED ✓' : active ? 'ARMED' : 'LOCKED'}
+                      <div className="text-[11px] font-bold mt-0.5">
+                        {done ? 'CRACKED ✓' : active ? 'ARMED' : 'SEALED'}
                       </div>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Interactive Laser Timing Bar */}
+              {/* Interactive Precision Timing Bar */}
               <div className="rounded-2xl bg-[#090608] border border-rose-500/30 p-5 space-y-4">
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center justify-between text-xs gap-2">
                   <span className="font-bold text-amber-300">{currentTumbler.label}</span>
-                  <span className="font-mono-tabular text-emerald-400 font-bold">
-                    Sweet Spot: {currentTumbler.min}% – {currentTumbler.max}%
+                  <span className="font-mono-tabular text-emerald-400 font-bold whitespace-nowrap">
+                    Window: {currentTumbler.min}% – {currentTumbler.max}%
                   </span>
                 </div>
 
                 <div className="relative w-full h-12 rounded-xl bg-rose-950/80 border-2 border-rose-500/40 overflow-hidden">
-                  {/* Safe Green Target Window */}
+                  {/* Razor-Narrow Safe Green Target Window */}
                   <div
-                    className="absolute top-0 bottom-0 bg-emerald-500/45 border-x-2 border-emerald-300 flex items-center justify-center"
+                    className="absolute top-0 bottom-0 bg-emerald-500/55 border-x-2 border-emerald-300 flex items-center justify-center"
                     style={{
                       left: `${currentTumbler.min}%`,
                       width: `${currentTumbler.max - currentTumbler.min}%`,
                     }}
                   >
-                    <span className="text-[10px] font-mono-tabular font-extrabold text-emerald-100 uppercase tracking-wider">
-                      SAFE ZONE
+                    <span className="text-[9px] font-mono-tabular font-extrabold text-emerald-100 uppercase">
+                      HIT
                     </span>
                   </div>
 
-                  {/* Moving Laser Pin */}
+                  {/* Fast Laser Pin */}
                   <div
                     ref={pinElRef}
-                    className="absolute top-0 bottom-0 w-2.5 -ml-1.25 bg-amber-300 shadow-[0_0_15px_#fde047] rounded-full"
-                    style={{ left: '48%' }}
+                    className="absolute top-0 bottom-0 w-2 -ml-1 bg-amber-300 shadow-[0_0_15px_#fde047] rounded-full"
+                    style={{ left: '12%' }}
                   />
                 </div>
 
@@ -233,12 +306,14 @@ export const CasinoHeistModal: React.FC<CasinoHeistModalProps> = ({
                       onClick={handleLockTumbler}
                       className="flex-1 py-4 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-display font-extrabold text-sm tracking-wider uppercase shadow-xl cursor-pointer"
                     >
-                      CRACK TUMBLER {stageIndex + 1}/3 NOW!
+                      CRACK LOCK {stageIndex + 1}/4 NOW!
                     </button>
                     <button
                       type="button"
                       data-testid="heist-trip-alarm-btn"
                       onClick={() => {
+                        if (caughtTriggeredRef.current) return;
+                        caughtTriggeredRef.current = true;
                         soundEngine.playArrestSiren();
                         setStatus('CAUGHT');
                         setTimeout(() => {
@@ -247,20 +322,20 @@ export const CasinoHeistModal: React.FC<CasinoHeistModalProps> = ({
                       }}
                       className="px-4 py-4 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-200 font-mono-tabular text-xs font-bold cursor-pointer"
                     >
-                      Botch &amp; Trip Laser (Instant Arrest)
+                      Surrender (Instant Arrest)
                     </button>
                   </div>
                 )}
 
                 {status === 'WON' && (
                   <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-400 text-center text-emerald-200 font-bold text-sm">
-                    VAULT CRACKED! Escaping with +500,000 Chips &amp; +$250,000 Cash...
+                    VAULT CRACKED! Escaping with +350,000 Chips &amp; +$150,000 Cash...
                   </div>
                 )}
 
                 {status === 'CAUGHT' && (
                   <div className="p-3 rounded-xl bg-rose-600/30 border border-rose-400 text-center text-rose-200 font-bold text-sm">
-                    LASER ALARM TRIPPED! Casino SWAT Team deployed — Instant Arrest!
+                    {missReason}
                   </div>
                 )}
               </div>
